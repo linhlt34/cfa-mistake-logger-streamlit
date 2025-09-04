@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Bash(streamlit run:*)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\cygdrive\\c\\Users\\linhlt2\\Desktop"
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit secrets (keep config.toml for deployment)
+.streamlit/secrets.toml
+
+# Test files (keep out of production)
+test_*.py
+debug_*.py
+fix_*.py
+restart_*.md
+
+# Local CSV data files (users will create their own)
+mistake_log.csv
+mistake_log_*.csv
+
+# Temporary files
+DELETE_*
+*_backup_delete_me.csv
