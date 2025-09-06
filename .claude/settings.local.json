@@ -39,7 +39,9 @@
       "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
       "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
       "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
-      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)"
+      "Read(/C:\\Users\\linhlt2\\Desktop\\cfa_logerror/**)",
+      "Bash(python3:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": [],
