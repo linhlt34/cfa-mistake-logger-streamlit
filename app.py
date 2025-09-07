@@ -22,28 +22,36 @@ ERROR_TYPES = ["❌ Misread the question", "🔄 Wrong formula/concept", "⚠️
 
 PARSING_RULES = {
     'Category': [
+        # CFA specific patterns - most common first
+        r"Application of the Code and Standards: Level II",  # Exact match for most common
+        r"([A-Z][a-zA-Z\s:]+Level\s+[IVX]+)",  # General pattern for levels
         r"Review Category[:\s]+(.*?)(?=\n|Question)",
         r"Done Practicing\s*([A-Z][a-zA-Z\s]+?)(?=\s*Question|\s*\d+\s+of\s+\d+|\n|$)",
-        # NEW: Extract category from end of text (common pattern in CFA questions)
+        # Extract category from end of text (common pattern in CFA questions)
         r"\n\s*([A-Z][a-zA-Z\s]+?)\s*\n\s*demonstrate the use",
         r"^(.*?)\n"
     ],
     'Question Number': [
-        r"Question\s+(\d+\s+of\s+\d+)",  # More flexible spacing
-        r"Question[:\s]+(\d+ of \d+)"
+        # CFA specific patterns - most common first
+        r"Question\s+(\d+\s+of\s+\d+)",  # Standard "Question 1 of 1" format
+        r"Question[:\s]+(\d+ of \d+)",
+        r"(\d+\s+of\s+\d+)",  # Just the numbers part
     ],
     'Result': [
+        # CFA specific patterns - most common first
         r"Your result is (\w+)\.",
-        r"\b(Correct|Incorrect)\b"
+        r"✓.*?(Correct)",  # Pattern for checkmark + Correct - capture "Correct"
+        r"\b(Correct|Incorrect)\b",
+        r"Correct Answer.*?Your Answer.*?([A-Z])\s*✓",  # Extract when answer is marked with checkmark
     ],
     'Question Text': [
-        # NEW: Extract question text from the specific pattern in CFA questions
-        r"Question\s*\n\s*(If.*?been:)\s*\n",  # Extract the actual question starting with "If"
-        r"Question\s*\n\s*(.*?)(?=\s*A\.|Solution)",
+        # CFA specific patterns - extract the actual question content
+        r"Question\s*\n(.*?)(?=\s*A\.\s*$|\s*A\.\s*\n|\s*Solution)",  # Question followed by A. or Solution
+        r"Question\s*\n\s*(.*?)(?=\s*Did.*violate)",  # For CFA ethics questions ending with "Did X violate"
+        r"Question\s*\n(.*?)(?=\s*A\.|Solution)",  # General pattern
         r"(?:^|\n)\s*Question\s*\n(.*?)(?=\nSolution|\nA\.)",
-        r"Question\s*\n(.*?)(?=\nA\.|\nSolution)",
         r"Question\s+(.*?)(?=\nA\.|\nSolution)",
-        # NEW: Extract text between Question and A./Solution with flexible whitespace
+        # Extract text between Question and A./Solution with flexible whitespace
         r"Question\s+(.*?)(?=\s*A\.\s*lower|\s*Solution)"
     ],
     'Confidence Level': [
@@ -51,8 +59,11 @@ PARSING_RULES = {
         r"Confidence Level:[^\n]*?\n([^\n\r]*?)(?=\n|$|Continue)"
     ],
     'Time Spent': [
-        r"Time Spent:\s*([^\n]*?)(?=\n|$)",
-        r"This Question:\s*(\d{2}:\d{2})"  # Extract time from "This Question:01:36" format
+        # CFA specific patterns - most common first
+        r"Total:\s*(\d{2}:\d{2})",  # Extract from "Total: 00:03"
+        r"This Question:\s*(\d{2}:\d{2})",  # Extract time from "This Question:01:36" format
+        r"Time Spent:\s*(\d+ secs?)",  # Extract "3 secs"
+        r"Time Spent:\s*([^\n]*?)(?=\n|$)"
     ],
     'Difficulty Level': [
         r"Difficulty Level:\s*([^\n]*?)(?=\n|$)"
@@ -75,22 +86,34 @@ def parse_text(raw_text):
             flags = re.IGNORECASE | re.DOTALL | re.MULTILINE
             match = re.search(pattern, raw_text, flags)
             if match:
-                value = match.group(1).strip()
+                # Handle patterns with or without capturing groups
+                if match.groups():
+                    value = match.group(1).strip()
+                else:
+                    value = match.group(0).strip()
                 
                 # Special handling for different fields
                 if field == 'Result':
                     value = value.capitalize()
-                elif field == 'Time Spent' and ':' in value:
-                    # Convert MM:SS format to "M mins SS secs"
-                    try:
-                        time_parts = value.split(':')
-                        if len(time_parts) == 2:
-                            minutes = int(time_parts[0])
-                            seconds = int(time_parts[1])
-                            if 0 <= minutes <= 999 and 0 <= seconds <= 59:
-                                value = f"{minutes} mins {seconds} secs"
-                    except (ValueError, IndexError):
-                        pass  # Keep original format if conversion fails
+                elif field == 'Time Spent':
+                    # If it's already in seconds format, keep it
+                    if 'sec' in value.lower():
+                        pass  # Keep as is
+                    elif ':' in value:
+                        # Convert MM:SS format to "M mins SS secs" only if it's long enough to warrant it
+                        try:
+                            time_parts = value.split(':')
+                            if len(time_parts) == 2:
+                                minutes = int(time_parts[0])
+                                seconds = int(time_parts[1])
+                                if 0 <= minutes <= 999 and 0 <= seconds <= 59:
+                                    # If less than 1 minute, just show seconds
+                                    if minutes == 0:
+                                        value = f"{seconds} secs"
+                                    else:
+                                        value = f"{minutes} mins {seconds} secs"
+                        except (ValueError, IndexError):
+                            pass  # Keep original format if conversion fails
                 
                 parsed_data[field] = value
                 found = True
@@ -496,15 +519,8 @@ with col3:
             st.session_state.selected_for_deletion = []
 
 with col4:
-    if st.session_state.show_delete_mode and st.session_state.selected_for_deletion:
-        if st.button("❌ Delete Selected", type="primary"):
-            if delete_selected_mistakes(st.session_state.selected_for_deletion):
-                st.success(f"Deleted {len(st.session_state.selected_for_deletion)} mistake(s)!")
-                st.session_state.selected_for_deletion = []
-                st.session_state.show_delete_mode = False
-                st.rerun()
-            else:
-                st.error("Failed to delete selected mistakes.")
+    # Placeholder for delete button - will be shown after selections are processed
+    delete_button_placeholder = st.empty()
 
 # Display the log
 if os.path.exists(CSV_FILENAME):
@@ -553,22 +569,55 @@ if os.path.exists(CSV_FILENAME):
             display_with_status.insert(0, "Status", status_column)
             
             # Display clean single table
-            st.dataframe(display_with_status, use_container_width=True, hide_index=True)
+            st.dataframe(display_with_status, width='stretch', hide_index=True)
             
-            # Show selection count
+            # Show selection count and delete button after processing selections
             if st.session_state.selected_for_deletion:
                 st.error(f"⚠️ {len(st.session_state.selected_for_deletion)} row(s) will be deleted")
+            
+            # Now that selections are processed, show the delete button using the placeholder
+            with delete_button_placeholder.container():
+                # Check if there are any items selected
+                has_selections = len(st.session_state.selected_for_deletion) > 0
+                
+                if has_selections:
+                    if st.button("❌ Delete Selected", type="primary", key="delete_btn"):
+                        if delete_selected_mistakes(st.session_state.selected_for_deletion):
+                            st.success(f"Deleted {len(st.session_state.selected_for_deletion)} mistake(s)!")
+                            st.session_state.selected_for_deletion = []
+                            st.session_state.show_delete_mode = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete selected mistakes.")
+                else:
+                    # Show disabled button with helper text
+                    st.button("❌ Delete Selected", type="primary", disabled=True, key="delete_btn_disabled")
+                    st.caption("Select items above to enable deletion")
         else:
             # Normal display mode
+            # Clear the delete button placeholder when not in delete mode
+            with delete_button_placeholder.container():
+                pass  # Empty container
+            
             try:
-                st.dataframe(display_df_clean, use_container_width=True)
+                st.dataframe(display_df_clean, width='stretch')
             except Exception as e:
                 st.error(f"Error displaying dataframe: {e}")
                 # Fallback to table display
                 st.table(display_df_clean)
     elif df_log is not None:
         st.info("Mistake log file exists but contains no data.")
+        # Clear the delete button placeholder when no data
+        with delete_button_placeholder.container():
+            pass  # Empty container
     else:
         st.error("Error reading the mistake log file. Please check the file format.")
+        # Clear the delete button placeholder on error
+        with delete_button_placeholder.container():
+            pass  # Empty container
 else:
     st.info("No mistakes have been logged yet.")
+    # Clear the delete button placeholder when no file exists
+    if 'delete_button_placeholder' in locals():
+        with delete_button_placeholder.container():
+            pass  # Empty container
