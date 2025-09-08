@@ -5,8 +5,10 @@
 ### ✅ **Files Ready**
 - [ ] `app.py` - Main application (tested and working)
 - [ ] `requirements.txt` - Dependencies specified
-- [ ] `README.md` - Project documentation complete
+- [ ] `README.md` - Project documentation updated
+- [ ] `PROJECT_SUMMARY.md` - Project summary updated
 - [ ] `.streamlit/config.toml` - Streamlit configuration
+- [ ] `DEPLOYMENT.md` & `DEPLOYMENT_CHECKLIST.md` - Guides are current
 - [ ] `.gitignore` - Proper exclusions set
 - [ ] `sample_data.csv` - Example data format
 
@@ -14,9 +16,10 @@
 - [ ] App runs locally without errors
 - [ ] All CSV operations work correctly
 - [ ] File upload/download functionality tested
-- [ ] Error types buttons work
+- [ ] Error type buttons work
 - [ ] Notes saving works
 - [ ] Table display shows data correctly
+- [ ] Delete mode and bulk deletion work correctly
 
 ### ✅ **GitHub Setup**
 - [ ] Repository created on GitHub
@@ -35,7 +38,7 @@ streamlit run app.py
 - [ ] Can select error types and save
 - [ ] Table displays logged mistakes
 - [ ] Export CSV functionality works
-- [ ] Import CSV functionality works
+- [ ] Multi-file import and merge functionality works
 
 ### 2. **GitHub Repository**
 ```bash

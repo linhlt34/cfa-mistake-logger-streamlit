@@ -8,26 +8,17 @@ A Streamlit application for tracking and analyzing mistakes made during CFA exam
 
 ## Features
 
-
-
 - **Automatic Text Parsing**: Extracts question details, results, and categories from pasted content
-
 - **Error Classification**: Categorize mistakes into different types:
-
-  - Misread the question
-
-  - Wrong formula/concept
-
-  - Calculation error  
-
-  - Uncertain
-
+  - Misread the question
+  - Wrong formula/concept
+  - Calculation error
+  - Uncertain
 - **Notes Support**: Add detailed notes for each mistake
-
-- **Data Export**: Export mistake log to CSV with timestamp
-
-- **Data Import**: Load and merge existing CSV logs
-
+- **Advanced Data Management**:
+  - **Export**: Download your log as a standard CSV or an Excel-optimized file.
+  - **Import**: Upload and merge multiple log files at once, with automatic de-duplication.
+  - **Delete**: A dedicated "Delete Mode" allows for easy removal of incorrect entries.
 - **Real-time Display**: View recent mistakes in a clean table format
 
 
