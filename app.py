@@ -22,29 +22,53 @@ ERROR_TYPES = ["❌ Misread the question", "🔄 Wrong formula/concept", "⚠️
 
 PARSING_RULES = {
     'Category': [
+        # 1. Looks for an explicit "Review Category:" label. Most reliable.
         r"Review Category[:\s]+(.*?)(?=\n|Question)",
-        r"Done Practicing([^Q]*?)(?=Question|\n)",  # Extract category after "Done Practicing"
-        r"^(.*?)\n"
+        
+        # 2. Catches category from "Done Practicing" screen. Allows more characters.
+        r"Done Practicing\s*(.*?)(?=\s*Question|\s*\d+\s+of\s+\d+|\n|$)",
+        
+        # 3. General pattern for CFA topics that include a level, e.g., "Ethical and Professional Standards: Level I".
+        # This is more robust than the old hardcoded one.
+        r"([A-Z][a-zA-Z\s&,-]+:\s*Level\s+[IVX]+)",
+        
+        # 4. Fallback: Assumes the category is a single line that looks like a title.
+        # This is a safer version of the old `^(.*?)\n` as it requires length and no digits.
+        r"^\s*([A-Za-z\s&,-]{5,})\s*$"
     ],
     'Question Number': [
-        r"Question[:\s]+(\d+ of \d+)"
+        # CFA specific patterns - most common first
+        r"Question\s+(\d+\s+of\s+\d+)",  # Standard "Question 1 of 1" format
+        r"Question[:\s]+(\d+ of \d+)",
+        r"(\d+\s+of\s+\d+)",  # Just the numbers part
     ],
     'Result': [
+        # CFA specific patterns - most common first
         r"Your result is (\w+)\.",
-        r"\b(Correct|Incorrect)\b"
+        r"✓.*?(Correct)",  # Pattern for checkmark + Correct - capture "Correct"
+        r"\b(Correct|Incorrect)\b",
+        r"Correct Answer.*?Your Answer.*?([A-Z])\s*✓",  # Extract when answer is marked with checkmark
     ],
     'Question Text': [
-        r"(?:^|\n)Question\s*\n(.*?)(?=\nSolution|\nA\.)",
-        r"Question\s*\n(.*?)(?=\nA\.|\nSolution)",
-        r"Question\s+(.*?)(?=\nA\.|\nSolution)"
+        # CFA specific patterns - extract the actual question content
+        r"Question\s*\n(.*?)(?=\s*A\.\s*$|\s*A\.\s*\n|\s*Solution)",  # Question followed by A. or Solution
+        r"Question\s*\n\s*(.*?)(?=\s*Did.*violate)",  # For CFA ethics questions ending with "Did X violate"
+        r"Question\s*\n(.*?)(?=\s*A\.|Solution)",  # General pattern
+        r"(?:^|\n)\s*Question\s*\n(.*?)(?=\nSolution|\nA\.)",
+        r"Question\s+(.*?)(?=\nA\.|\nSolution)",
+        # Extract text between Question and A./Solution with flexible whitespace
+        r"Question\s+(.*?)(?=\s*A\.\s*lower|\s*Solution)"
     ],
     'Confidence Level': [
         r"Confidence Level:\s*([^\n\r]*?)(?=\n|$|Continue)",
         r"Confidence Level:[^\n]*?\n([^\n\r]*?)(?=\n|$|Continue)"
     ],
     'Time Spent': [
-        r"Time Spent:\s*([^\n]*?)(?=\n|$)",
-        r"This Question:\s*(\d{2}:\d{2})"  # Extract time from "This Question:01:36" format
+        # CFA specific patterns - most common first
+        r"This Question:\s*(\d{2}:\d{2})",  # Extract time from "This Question:01:36" format
+        r"Total:\s*(\d{2}:\d{2})",  # Fallback to total time if question time isn't present
+        r"Time Spent:\s*(\d+ secs?)",  # Extract "3 secs"
+        r"Time Spent:\s*([^\n]*?)(?=\n|$)"
     ],
     'Difficulty Level': [
         r"Difficulty Level:\s*([^\n]*?)(?=\n|$)"
@@ -67,22 +91,34 @@ def parse_text(raw_text):
             flags = re.IGNORECASE | re.DOTALL | re.MULTILINE
             match = re.search(pattern, raw_text, flags)
             if match:
-                value = match.group(1).strip()
+                # Handle patterns with or without capturing groups
+                if match.groups():
+                    value = match.group(1).strip()
+                else:
+                    value = match.group(0).strip()
                 
                 # Special handling for different fields
                 if field == 'Result':
                     value = value.capitalize()
-                elif field == 'Time Spent' and ':' in value:
-                    # Convert MM:SS format to "M mins SS secs"
-                    try:
-                        time_parts = value.split(':')
-                        if len(time_parts) == 2:
-                            minutes = int(time_parts[0])
-                            seconds = int(time_parts[1])
-                            if 0 <= minutes <= 999 and 0 <= seconds <= 59:
-                                value = f"{minutes} mins {seconds} secs"
-                    except (ValueError, IndexError):
-                        pass  # Keep original format if conversion fails
+                elif field == 'Time Spent':
+                    # If it's already in seconds format, keep it
+                    if 'sec' in value.lower():
+                        pass  # Keep as is
+                    elif ':' in value:
+                        # Convert MM:SS format to "M mins SS secs" only if it's long enough to warrant it
+                        try:
+                            time_parts = value.split(':')
+                            if len(time_parts) == 2:
+                                minutes = int(time_parts[0])
+                                seconds = int(time_parts[1])
+                                if 0 <= minutes <= 999 and 0 <= seconds <= 59:
+                                    # If less than 1 minute, just show seconds
+                                    if minutes == 0:
+                                        value = f"{seconds} secs"
+                                    else:
+                                        value = f"{minutes} mins {seconds} secs"
+                        except (ValueError, IndexError):
+                            pass  # Keep original format if conversion fails
                 
                 parsed_data[field] = value
                 found = True
@@ -142,15 +178,24 @@ def is_valid_data(data):
     if not data:
         return False
     
-    # Require essential fields: Category, Result, and Question Text
-    # These are the minimum required for a meaningful mistake log entry
-    essential_fields = ['Category', 'Result', 'Question Text']
+    # Require essential fields: Category and Result at minimum
+    # Question Text is preferred but not mandatory if we have other key data
+    essential_fields = ['Category', 'Result']
     
     # All essential fields must have non-empty data
     for field in essential_fields:
         if field not in data or not data[field].strip():
             return False
     
+    # If we have Question Number, that's also a strong indicator of valid data
+    if data.get('Question Number', '').strip():
+        return True
+        
+    # If we have Question Text, that's good too
+    if data.get('Question Text', '').strip():
+        return True
+        
+    # If we have Category and Result, accept it (user can manually add details)
     return True
 
 def auto_save_and_clear(error_type, notes=""):
@@ -236,9 +281,28 @@ def export_csv():
             df_export = df.copy()
             df_export['Error Type'] = df_export['Error Type'].apply(clean_error_type_for_csv)
             
+            # Ensure all text fields are properly encoded for Excel
+            text_columns = ['Category', 'Question Text', 'Error Type', 'Notes', 'Confidence Level', 'Difficulty Level']
+            for col in text_columns:
+                if col in df_export.columns:
+                    # Normalize Unicode characters and ensure proper encoding
+                    df_export[col] = df_export[col].astype(str).apply(
+                        lambda x: x.encode('utf-8', errors='ignore').decode('utf-8') if x and x != 'nan' else ''
+                    )
+            
             date_str = datetime.now().strftime("%m%d")
             filename = f"mistake_log_{date_str}.csv"
-            return df_export.to_csv(index=False, encoding='utf-8-sig', quoting=1), filename
+            
+            # Use UTF-8 with BOM for Excel compatibility and quote all text fields
+            csv_data = df_export.to_csv(
+                index=False, 
+                encoding='utf-8-sig',  # BOM helps Excel recognize UTF-8
+                quoting=1,  # Quote all non-numeric fields
+                escapechar='\\',  # Proper escaping
+                lineterminator='\n'  # Standard line endings
+            )
+            
+            return csv_data, filename
     return None, None
 
 def load_old_log(uploaded_file):
@@ -279,6 +343,26 @@ def load_old_log(uploaded_file):
             st.error(f"Error loading file: {e}")
             return False
     return False
+
+def delete_selected_mistakes(selected_indices):
+    """Delete selected mistakes from the CSV file."""
+    if not selected_indices or not os.path.exists(CSV_FILENAME):
+        return False
+    
+    try:
+        df = read_csv_safe(CSV_FILENAME)
+        if df is None or df.empty:
+            return False
+        
+        # Remove selected rows (indices are from the display, need to map to actual dataframe)
+        df_filtered = df.drop(selected_indices).reset_index(drop=True)
+        
+        # Save the updated dataframe
+        df_filtered.to_csv(CSV_FILENAME, index=False, encoding='utf-8-sig', quoting=1)
+        return True
+    except Exception as e:
+        st.error(f"Error deleting mistakes: {e}")
+        return False
 
 def process_uploaded_log():
     """Handles single or multiple uploaded files with data protection."""
@@ -322,6 +406,10 @@ if 'notes_input_key' not in st.session_state:
     st.session_state.notes_input_key = 0
 if 'files_processed' not in st.session_state:
     st.session_state.files_processed = False
+if 'selected_for_deletion' not in st.session_state:
+    st.session_state.selected_for_deletion = []
+if 'show_delete_mode' not in st.session_state:
+    st.session_state.show_delete_mode = False
 
 # --- User Interface ---
 st.title("✍️ Mistake Logger")
@@ -387,18 +475,34 @@ st.markdown("---")
 st.subheader("📜 Logged Mistake History")
 
 # Export and Load buttons
-col1, col2, col3 = st.columns([1, 1, 2])
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
 with col1:
     if st.button("📥 Export CSV"):
         csv_data, filename = export_csv()
         if csv_data and filename:
-            st.download_button(
-                label="Download CSV",
-                data=csv_data,
-                file_name=filename,
-                mime="text/csv"
-            )
+            # Provide two download options
+            col_csv, col_excel = st.columns(2)
+            
+            with col_csv:
+                st.download_button(
+                    label="📄 Download CSV",
+                    data=csv_data,
+                    file_name=filename,
+                    mime="text/csv",
+                    help="Standard CSV - works in all programs"
+                )
+            
+            with col_excel:
+                # Create Excel-optimized version
+                excel_filename = filename.replace('.csv', '_excel.csv')
+                st.download_button(
+                    label="📊 Download for Excel",
+                    data=csv_data,
+                    file_name=excel_filename,
+                    mime="application/vnd.ms-excel",
+                    help="Optimized for Microsoft Excel with Vietnamese text support"
+                )
         else:
             st.warning("No valid data to export")
 
@@ -413,25 +517,112 @@ with col2:
         accept_multiple_files=True
     )
 
+with col3:
+    if st.button("🗑️ Delete Mode"):
+        st.session_state.show_delete_mode = not st.session_state.show_delete_mode
+        if not st.session_state.show_delete_mode:
+            st.session_state.selected_for_deletion = []
+
+with col4:
+    # Placeholder for delete button - will be shown after selections are processed
+    delete_button_placeholder = st.empty()
+
 # Display the log
 if os.path.exists(CSV_FILENAME):
     df_log = read_csv_safe(CSV_FILENAME)
     if df_log is not None and len(df_log) > 0:
         # Display the last 10 rows, reversed to show the latest on top
-        display_df = df_log.tail(10).iloc[::-1]
+        display_df = df_log.tail(10).iloc[::-1].reset_index(drop=False)
+        display_indices = display_df['index'].tolist()  # Get original indices
+        display_df_clean = display_df.drop('index', axis=1)  # Remove index column from display
         
         # Force clear any potential caching issues
         st.write(f"Found {len(df_log)} mistake(s) in log:")
         
-        try:
-            st.dataframe(display_df, width='stretch')
-        except Exception as e:
-            st.error(f"Error displaying dataframe: {e}")
-            # Fallback to table display
-            st.table(display_df)
+        if st.session_state.show_delete_mode:
+            st.warning("🗑️ Delete Mode: Select rows to delete, then click 'Delete Selected'")
+            
+            # Simple selection checkboxes in a clean row
+            st.markdown("**Select rows:**")
+            cols = st.columns(len(display_df_clean) if len(display_df_clean) <= 5 else 5)
+            
+            for i, (idx, row) in enumerate(display_df_clean.iterrows()):
+                original_idx = display_indices[i]
+                col_index = i % 5  # Max 5 per row
+                
+                with cols[col_index]:
+                    is_selected = st.checkbox(
+                        f"Row {i+1}",
+                        value=original_idx in st.session_state.selected_for_deletion,
+                        key=f"delete_checkbox_{original_idx}"
+                    )
+                    
+                    # Update selection state
+                    if is_selected and original_idx not in st.session_state.selected_for_deletion:
+                        st.session_state.selected_for_deletion.append(original_idx)
+                    elif not is_selected and original_idx in st.session_state.selected_for_deletion:
+                        st.session_state.selected_for_deletion.remove(original_idx)
+            
+            # Add selection status to table
+            display_with_status = display_df_clean.copy()
+            status_column = []
+            for i, (idx, row) in enumerate(display_df_clean.iterrows()):
+                original_idx = display_indices[i]
+                status = "🔴 DELETE" if original_idx in st.session_state.selected_for_deletion else ""
+                status_column.append(status)
+            
+            display_with_status.insert(0, "Status", status_column)
+            
+            # Display clean single table
+            st.dataframe(display_with_status, width='stretch', hide_index=True)
+            
+            # Show selection count and delete button after processing selections
+            if st.session_state.selected_for_deletion:
+                st.error(f"⚠️ {len(st.session_state.selected_for_deletion)} row(s) will be deleted")
+            
+            # Now that selections are processed, show the delete button using the placeholder
+            with delete_button_placeholder.container():
+                # Check if there are any items selected
+                has_selections = len(st.session_state.selected_for_deletion) > 0
+                
+                if has_selections:
+                    if st.button("❌ Delete Selected", type="primary", key="delete_btn"):
+                        if delete_selected_mistakes(st.session_state.selected_for_deletion):
+                            st.success(f"Deleted {len(st.session_state.selected_for_deletion)} mistake(s)!")
+                            st.session_state.selected_for_deletion = []
+                            st.session_state.show_delete_mode = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete selected mistakes.")
+                else:
+                    # Show disabled button with helper text
+                    st.button("❌ Delete Selected", type="primary", disabled=True, key="delete_btn_disabled")
+                    st.caption("Select items above to enable deletion")
+        else:
+            # Normal display mode
+            # Clear the delete button placeholder when not in delete mode
+            with delete_button_placeholder.container():
+                pass  # Empty container
+            
+            try:
+                st.dataframe(display_df_clean, width='stretch')
+            except Exception as e:
+                st.error(f"Error displaying dataframe: {e}")
+                # Fallback to table display
+                st.table(display_df_clean)
     elif df_log is not None:
         st.info("Mistake log file exists but contains no data.")
+        # Clear the delete button placeholder when no data
+        with delete_button_placeholder.container():
+            pass  # Empty container
     else:
         st.error("Error reading the mistake log file. Please check the file format.")
+        # Clear the delete button placeholder on error
+        with delete_button_placeholder.container():
+            pass  # Empty container
 else:
     st.info("No mistakes have been logged yet.")
+    # Clear the delete button placeholder when no file exists
+    if 'delete_button_placeholder' in locals():
+        with delete_button_placeholder.container():
+            pass  # Empty container
