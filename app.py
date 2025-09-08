@@ -24,14 +24,11 @@ PARSING_RULES = {
     'Category': [
         # 1. Looks for an explicit "Review Category:" label. Most reliable.
         r"Review Category[:\s]+(.*?)(?=\n|Question)",
-        
         # 2. Catches category from "Done Practicing" screen. Allows more characters.
         r"Done Practicing\s*(.*?)(?=\s*Question|\s*\d+\s+of\s+\d+|\n|$)",
-        
         # 3. General pattern for CFA topics that include a level, e.g., "Ethical and Professional Standards: Level I".
         # This is more robust than the old hardcoded one.
         r"([A-Z][a-zA-Z\s&,-]+:\s*Level\s+[IVX]+)",
-        
         # 4. Fallback: Assumes the category is a single line that looks like a title.
         # This is a safer version of the old `^(.*?)\n` as it requires length and no digits.
         r"^\s*([A-Za-z\s&,-]{5,})\s*$"
